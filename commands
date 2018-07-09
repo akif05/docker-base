@@ -1,0 +1,68 @@
+mkdir todobackend-client
+mkdir todobackend-specs
+mkdir todobackend-base
+tree -L 2
+cd todobackend-base/
+git init
+vi Dockerfile 
+root@ubuntu-base:~/todobackend-base# cat Dockerfile 
+FROM ubuntu:trusty
+MAINTAINER Akif Yusein <akif05@gmail.com>
+
+# Prevent dpkg errors
+ENV TERM=xterm-256color
+
+# Set mirror to NZ
+RUN sed -i "s/http:\/\/archive./http:\/\/nz.archive./g" /etc/apt/sources.list
+
+# Install Python runtime
+RUN apt-get update && \
+  apt-get install -qy \
+  -o APT::Install-Recommend=false -o APT::Install-Suggests=false \
+  python python-virtualenv libpython2.7 python-mysqldb
+
+# Create virtual environment
+# Upgrade pip in virtual environment to latest version
+RUN virtualenv /appenv && \
+  . /appenv/bin/activate && \
+  pip install pip --upgrade
+
+# Add entrypoint script
+ADD scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["entrypoint.sh"]
+
+cd /root/todobakcend/
+git add -A
+git commit -a -m "$1"
+git push -u origin master
+
+mkdir scripts
+vi scripts/entrypoint.sh
+root@ubuntu-base:~/todobackend-base# cat scripts/entrypoint.sh 
+#!/bin/bash
+. /appenv/bin/activate
+exec $@
+
+docker build  -t jmenga/todobackend-base .
+
+# list all images
+docker images -a
+docker rmi $(docker images -a -q)
+docker rmi 2d94 -f
+
+root@ubuntu-base:~/todobackend-base# cat sync_git.sh 
+#!/bin/bash
+
+if [ -z "$1" ]; then
+  echo "Provide comment before pushing to master"
+  exit
+fi
+
+cp ../todobackend/sync_git.sh ./
+ls
+./sync_git.sh "base image working"
+
+git remote add origin https://github.com/akif05/docker-base.git
+git push -u origin master
+
